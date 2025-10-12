@@ -1,18 +1,30 @@
 <?php
 
 $upstreams = [
-    "https://1.1.1.1/dns-query",
     "https://1.0.0.1/dns-query",
-    "https://8.8.8.8/dns-query",
     "https://8.8.4.4/dns-query",
     "https://9.9.9.9/dns-query",
     "https://149.112.112.112/dns-query",
-    "https://208.67.222.222/dns-query",
     "https://208.67.220.220/dns-query",
+    "https://101.101.101.101/dns-query",
     "https://dns.nextdns.io/dns-query",
     "https://doh.opendns.com/dns-query",
+    "https://unfiltered.adguard-dns.com/dns-query",
+    "https://freedns.controld.com/p0",
+    "https://ordns.he.net/dns-query",
+    "https://dns.mullvad.net/dns-query",
+    "https://odvr.nic.cz/doh",
+    "https://doh.libredns.gr/dns-query",
+    "https://public.dns.iij.jp/dns-query",
+    "https://doh.dns.sb/dns-query",
+    "https://resolver.dnsprivacy.org.uk/dns-query",
+    "https://jp.tiar.app/dns-query",
+    "https://dns.dnsguard.pub/dns-query",
+    "https://rx.techomespace.com/dns-query"
 ];
+
 $cache_ttl = 600;
+$batch_size = 2;
 
 function now_ms()
 {
@@ -65,88 +77,108 @@ if (function_exists("apcu_fetch")) {
     }
 }
 
-$mh = curl_multi_init();
-$chs = [];
+shuffle($upstreams);
 
-foreach ($upstreams as $up) {
-    $ch = curl_init($up . $extra_query);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            "Content-Type: application/dns-message",
-            "Accept: application/dns-message",
-        ],
-        CURLOPT_POSTFIELDS => $body,
-        CURLOPT_CUSTOMREQUEST => $method,
-        CURLOPT_TIMEOUT => 5,
-    ]);
-    curl_multi_add_handle($mh, $ch);
-    $chs[(int) $ch] = $ch;
+function query_batch(
+    array $batch,
+    string $method,
+    string $extra_query,
+    string $body,
+    int $cache_ttl,
+    string $cache_key
+) {
+    $mh = curl_multi_init();
+    $chs = [];
+
+    foreach ($batch as $up) {
+        $ch = curl_init($up . $extra_query);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/dns-message",
+                "Accept: application/dns-message",
+            ],
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_TIMEOUT => 4,
+            CURLOPT_FORBID_REUSE => false,
+            CURLOPT_FRESH_CONNECT => false,
+        ]);
+        curl_multi_add_handle($mh, $ch);
+        $chs[(int) $ch] = $ch;
+    }
+
+    $running = null;
+    $first_failure = null;
+
+    do {
+        curl_multi_exec($mh, $running);
+
+        while ($info = curl_multi_info_read($mh)) {
+            $ch = $info["handle"];
+            if (
+                $info["result"] === CURLE_OK &&
+                curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200
+            ) {
+                $resp = curl_multi_getcontent($ch);
+                if (strlen($resp) >= 4) {
+                    $rcode = ord($resp[3]) & 0x0f;
+                } else {
+                    $rcode = 2;
+                }
+
+                if ($rcode === 0) {
+                    if (function_exists("apcu_store")) {
+                        apcu_store($cache_key, $resp, $cache_ttl);
+                    }
+                    header("Content-Type: application/dns-message");
+                    echo $resp;
+
+                    foreach ($chs as $c) {
+                        curl_multi_remove_handle($mh, $c);
+                        curl_close($c);
+                    }
+                    curl_multi_close($mh);
+                    exit();
+                } else {
+                    if ($first_failure === null) {
+                        $first_failure = $resp;
+                    }
+                }
+            }
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+            unset($chs[(int) $ch]);
+        }
+
+        if ($running) {
+            curl_multi_select($mh, 0.1);
+        }
+    } while ($running);
+
+    curl_multi_close($mh);
+    return $first_failure;
 }
 
 $first_failure = null;
-$running = null;
-$finished_count = 0;
-$total = count($chs);
-
-do {
-    curl_multi_exec($mh, $running);
-    while ($info = curl_multi_info_read($mh)) {
-        $ch = $info["handle"];
-        $finished_count++;
-
-        if (
-            $info["result"] === CURLE_OK &&
-            curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200
-        ) {
-            $response = curl_multi_getcontent($ch);
-
-            if (strlen($response) >= 4) {
-                $rcode = ord($response[3]) & 0x0f;
-            } else {
-                $rcode = 2;
-            }
-
-            if ($rcode === 0) {
-                if (function_exists("apcu_store")) {
-                    apcu_store($cache_key, $response, $cache_ttl);
-                }
-
-                header("Content-Type: application/dns-message");
-                echo $response;
-
-                foreach ($chs as $c) {
-                    curl_multi_remove_handle($mh, $c);
-                    curl_close($c);
-                }
-                curl_multi_close($mh);
-                exit();
-            } else {
-                if ($first_failure === null) {
-                    $first_failure = $response;
-                }
-            }
+for ($i = 0; $i < count($upstreams); $i += $batch_size) {
+    $batch = array_slice($upstreams, $i, $batch_size);
+    $res = query_batch(
+        $batch,
+        $method,
+        $extra_query,
+        $body,
+        $cache_ttl,
+        $cache_key
+    );
+    if ($res !== null) {
+        if (function_exists("apcu_store")) {
+            apcu_store($cache_key, $res, $cache_ttl);
         }
-
-        curl_multi_remove_handle($mh, $ch);
-        curl_close($ch);
-        unset($chs[(int) $ch]);
+        header("Content-Type: application/dns-message");
+        echo $res;
+        exit();
     }
-
-    if ($running) {
-        curl_multi_select($mh, 1);
-    }
-} while ($running);
-
-curl_multi_close($mh);
-
-if ($first_failure !== null) {
-    if (function_exists("apcu_store")) {
-        apcu_store($cache_key, $first_failure, $cache_ttl);
-    }
-    header("Content-Type: application/dns-message");
-    echo $first_failure;
-    exit();
 }
 
 error_json(502, "All upstream DoH failed");
