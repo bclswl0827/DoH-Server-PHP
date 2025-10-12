@@ -16,6 +16,7 @@ $upstreams = [
     "https://odvr.nic.cz/doh",
     "https://doh.libredns.gr/dns-query",
     "https://public.dns.iij.jp/dns-query",
+    "https://doh.dns.sb/dns-query",
     "https://resolver.dnsprivacy.org.uk/dns-query",
     "https://jp.tiar.app/dns-query",
     "https://dns.dnsguard.pub/dns-query",
@@ -23,7 +24,7 @@ $upstreams = [
 ];
 
 $cache_ttl = 600;
-$batch_size = 2;
+$batch_size = 3;
 
 function now_ms()
 {
