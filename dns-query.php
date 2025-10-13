@@ -19,8 +19,7 @@ $upstreams = [
     "https://doh.dns.sb/dns-query",
     "https://resolver.dnsprivacy.org.uk/dns-query",
     "https://jp.tiar.app/dns-query",
-    "https://dns.dnsguard.pub/dns-query",
-    "https://rx.techomespace.com/dns-query"
+    "https://dns.dnsguard.pub/dns-query"
 ];
 
 $cache_ttl = 600;
