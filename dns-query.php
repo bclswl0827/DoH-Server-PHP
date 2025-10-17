@@ -21,7 +21,8 @@ $upstreams = [
     "https://jp.tiar.app/dns-query",
     "https://dns.dnsguard.pub/dns-query",
     "https://doh.applied-privacy.net/query",
-    "https://dns.bebasid.com/unfiltered"
+    "https://dns.bebasid.com/unfiltered",
+    "https://doh.cleanbrowsing.org/doh/security-filter/"
 ];
 
 $cache_ttl = 600;
