@@ -22,7 +22,13 @@ $upstreams = [
     "https://dns.dnsguard.pub/dns-query",
     "https://doh.applied-privacy.net/query",
     "https://dns.bebasid.com/unfiltered",
-    "https://doh.cleanbrowsing.org/doh/security-filter/"
+    "https://doh.cleanbrowsing.org/doh/security-filter/",
+    "https://wikimedia-dns.org/dns-query",
+    "https://doh.ffmuc.net/dns-query",
+    "https://dns.switch.ch/dns-query",
+    "https://private.canadianshield.cira.ca/dns-query",
+    "https://v.recipes/dns-query",
+    "https://sky.rethinkdns.com/dns-query"
 ];
 
 $cache_ttl = 600;
