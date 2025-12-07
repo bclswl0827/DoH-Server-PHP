@@ -6,7 +6,6 @@ $upstreams = [
     "https://9.9.9.9/dns-query",
     "https://149.112.112.112/dns-query",
     "https://208.67.220.220/dns-query",
-    "https://101.101.101.101/dns-query",
     "https://dns.nextdns.io/dns-query",
     "https://doh.opendns.com/dns-query",
     "https://unfiltered.adguard-dns.com/dns-query",
