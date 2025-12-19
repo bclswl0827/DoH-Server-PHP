@@ -26,7 +26,6 @@ $upstreams = [
     "https://doh.ffmuc.net/dns-query",
     "https://dns.switch.ch/dns-query",
     "https://private.canadianshield.cira.ca/dns-query",
-    "https://v.recipes/dns-query",
     "https://sky.rethinkdns.com/dns-query"
 ];
 
