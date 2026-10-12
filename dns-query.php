@@ -1,16 +1,14 @@
 <?php
 
 $upstreams = [
-    "https://1.0.0.1/dns-query",
-    "https://8.8.4.4/dns-query",
-    "https://208.67.220.220/dns-query",
-    "https://dns.nextdns.io/dns-query",
+    "https://dns.google/dns-query",
+    "https://doh.opendns.com/dns-query",
+    "https://dns.nextdns.io",
     "https://doh.opendns.com/dns-query",
     "https://unfiltered.adguard-dns.com/dns-query",
     "https://freedns.controld.com/p0",
     "https://public.dns.iij.jp/dns-query",
     "https://doh.dns.sb/dns-query",
-    "https://jp.tiar.app/dns-query",
     "https://dns.dnsguard.pub/dns-query",
     "https://doh.cleanbrowsing.org/doh/security-filter/",
     "https://wikimedia-dns.org/dns-query",
